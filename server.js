@@ -5,7 +5,7 @@ var _ = require('underscore');
 var db = require('./db.js');
 
 var app = express();
-var PORT = process.env.port || 3000;
+var PORT = process.env.PORT || 3000;
 
 // My fantastic todo collection (all of my todos!)
 var todos = [];
