@@ -2,6 +2,7 @@ var express = require('express');
 var middleware = require('./middleware');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
+var db = require('./db.js');
 
 var app = express();
 const PORT = 3000;
@@ -24,75 +25,80 @@ app.get('/about', middleware.requireAuthentication, function (req, res) {
 
 // REST API
 // GET /todos?completed=true&q=house
-app.get('/todos', function(req, res) {
-    var queryParams = req.query;
-    var filteredTodos = todos;
+app.get('/todos', function (req, res) {
+    var query = req.query; // query is whatever follows the ?
+    var where = {}; // search for multiple elements based on properties of this object
 
-    if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'true') {
-        filteredTodos = _.where(filteredTodos, {completed: true});
-    } else if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'false') {
-        filteredTodos = _.where(filteredTodos, {completed: false});
+    if(query.hasOwnProperty('completed') && query.completed == 'true') {
+        where.completed = true;
+    } else if (query.hasOwnProperty('completed') && query.completed == 'false') {
+        where.completed = false;
     }
 
-    if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
-        filteredTodos = _.filter(filteredTodos, function (todo) {
-            return todo.description.indexOf(queryParams.q) > -1;
-        });
+    if(query.hasOwnProperty('q') && query.q.length > 0) {
+        where.description = {
+            $like: '%' + query.q + '%'
+        };
     }
 
-    res.json(filteredTodos);
+    db.todo.findAll( {where: where} ).then(function (todos) { // search db based on 'where' object
+        res.json(todos);
+    }, function (e) {
+        res.status(500).send();
+    });
 });
 
 // GET /todos/:id
 app.get('/todos/:id', function (req, res) {
     let todoId = parseInt(req.params.id);
-    var matchedTodo;
 
-    matchedTodo = _.findWhere(todos, {id: todoId});
+    db.todo.findById(todoId).then(function (todo) {
+        if (!!todo) {
+            res.json(todo.toJSON());
+        } else {
+            res.status(404).send();
+        }
+    }, function (e) {
+        res.status(500).send(); // 500 = server error
+    });
 
-    if(matchedTodo) {
-        res.json(matchedTodo);
-    } else {
-        res.status(404).send();
-    }
 });
 
 // POST /todos
-app.post('/todos', function(req, res) {
+app.post('/todos', function (req, res) {
     var body = _.pick(req.body, 'description', 'completed');
 
-    if(_.isString(body.description) && _.isBoolean(body.completed)) {
-        body.id = todoNextId++;
-        todos.push(body);
-        res.json(body);
-    } else {
-        return res.status(422).send();
-    }
+    db.todo.create(body).then(function (todo) {
+        res.json(todo.toJSON());
+    }, function (e) {
+        res.status(400).json(e);
+    });
+
 });
 
 // DELETE /todos/:id
 app.delete('/todos/:id', function (req, res) {
-    if(_.isEmpty(todos)) { return res.status(400).json({"error": "cannot delete from empty list"})}
+    if (_.isEmpty(todos)) { return res.status(400).json({ "error": "cannot delete from empty list" }) }
 
     var todoId = parseInt(req.params.id, 10);
-    var matchedTodo = _.findWhere(todos, {id: todoId});
+    var matchedTodo = _.findWhere(todos, { id: todoId });
 
     if (!matchedTodo) {
-        res.status(404).json({"error": "no todo found with that id"});
+        res.status(404).json({ "error": "no todo found with that id" });
     } else {
         res.send(_.without(todos, matchedTodo));
     }
 });
 
 // PUT /todos/:id
-app.put('/todos/:id', function(req, res) {
+app.put('/todos/:id', function (req, res) {
     var todoId = parseInt(req.params.id, 10);
-    var matchedTodo = _.findWhere(todos, {id: todoId});
+    var matchedTodo = _.findWhere(todos, { id: todoId });
     var body = _.pick(req.body, 'description', 'completed');
     var validAttributes = {};
 
     if (!matchedTodo) {
-        return res.status(404).json({"error": "no todo found with that id"});
+        return res.status(404).json({ "error": "no todo found with that id" });
     }
 
     if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
@@ -116,18 +122,21 @@ app.put('/todos/:id', function(req, res) {
 
 });
 
-
-app.listen(PORT, function () {
-    var today = new Date();
-    var dd = today.getDate();
-    var mm = today.getMonth() + 1; // January is 0!
-    var yyyy = today.getFullYear();
-    if (dd < 10) {
-        dd = '0' + dd;
-      } 
-      if (mm < 10) {
-        mm = '0' + mm;
-      } 
-      var today = dd + '/' + mm + '/' + yyyy;
-    console.log("[" + today + "]" + " Server running at port " + PORT + ". Enjoy!");
+db.sequelize.sync().then(function () {
+    app.listen(PORT, function () {
+        var today = new Date();
+        var dd = today.getDate();
+        var mm = today.getMonth() + 1; // January is 0!
+        var yyyy = today.getFullYear();
+        if (dd < 10) {
+            dd = '0' + dd;
+        }
+        if (mm < 10) {
+            mm = '0' + mm;
+        }
+        var today = dd + '/' + mm + '/' + yyyy;
+        console.log("[" + today + "]" + " Server running at port " + PORT + ". Enjoy!");
+    });
 });
+
+
