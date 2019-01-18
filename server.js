@@ -7,6 +7,14 @@ var db = require('./db.js');
 var app = express();
 var PORT = process.env.PORT || 3000;
 
+////////////////////
+//////  TODO  //////
+////////////////////
+/*
+    1. Remove all traces of todo array
+    2. Delete via q like description
+*/
+
 // My fantastic todo collection (all of my todos!)
 var todos = [];
 var todoNextId = 1;
@@ -29,19 +37,19 @@ app.get('/todos', function (req, res) {
     var query = req.query; // query is whatever follows the ?
     var where = {}; // search for multiple elements based on properties of this object
 
-    if(query.hasOwnProperty('completed') && query.completed == 'true') {
+    if (query.hasOwnProperty('completed') && query.completed == 'true') {
         where.completed = true;
     } else if (query.hasOwnProperty('completed') && query.completed == 'false') {
         where.completed = false;
     }
 
-    if(query.hasOwnProperty('q') && query.q.length > 0) {
+    if (query.hasOwnProperty('q') && query.q.length > 0) {
         where.description = {
             $like: '%' + query.q + '%'
         };
     }
 
-    db.todo.findAll( {where: where} ).then(function (todos) { // search db based on 'where' object
+    db.todo.findAll({ where: where }).then(function (todos) { // search db based on 'where' object
         res.json(todos);
     }, function (e) {
         res.status(500).send();
@@ -78,47 +86,52 @@ app.post('/todos', function (req, res) {
 
 // DELETE /todos/:id
 app.delete('/todos/:id', function (req, res) {
-    if (_.isEmpty(todos)) { return res.status(400).json({ "error": "cannot delete from empty list" }) }
+    var todoId = parseInt(req.params.id);
 
-    var todoId = parseInt(req.params.id, 10);
-    var matchedTodo = _.findWhere(todos, { id: todoId });
-
-    if (!matchedTodo) {
-        res.status(404).json({ "error": "no todo found with that id" });
-    } else {
-        res.send(_.without(todos, matchedTodo));
-    }
+    db.todo.destroy({ // destroy returns number of rows deleted
+        where: {
+            id: todoId
+        }
+    }).then(function (rowsDeleted) { // SUCCESS
+        if (rowsDeleted === 0) {
+            res.status(404).json({
+                error: 'No todo with id'
+            });
+        } else {
+            res.status(204).send(); // 204 CODE "Everything went well, nothing to return.."
+        }
+    }, function () { // FAIL
+        res.status(500).send();
+    });
 });
 
 // PUT /todos/:id
 app.put('/todos/:id', function (req, res) {
     var todoId = parseInt(req.params.id, 10);
-    var matchedTodo = _.findWhere(todos, { id: todoId });
     var body = _.pick(req.body, 'description', 'completed');
-    var validAttributes = {};
+    var attributes = {};
 
-    if (!matchedTodo) {
-        return res.status(404).json({ "error": "no todo found with that id" });
+    if (body.hasOwnProperty('completed')) {
+        attributes.completed = body.completed;
     }
 
-    if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
-        validAttributes.completed = body.completed;
-    } else if (body.hasOwnProperty('completed')) {
-        return res.status(400).send();
-    } else {
-        // No attributes provided
+    if (body.hasOwnProperty('description')) {
+        attributes.description = body.description;
     }
 
-    if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
-        validAttributes.description = body.description;
-    } else if (body.hasOwnProperty('description')) {
-        return res.status(400).send();
-    } else {
-        // No attributes provided
-    }
-
-    _.extend(matchedTodo, validAttributes);
-    res.json(matchedTodo);
+    db.todo.findByPk(todoId).then(function (todo) {
+        if (todo) {
+            todo.update(attributes).then(function (todo) {
+                res.json(todo.toJSON());
+            }, function (e) {
+                res.status(400).json(e);
+            });
+        } else {
+            res.status(404).send();
+        }
+    }, function () {
+        res.status(500).send();
+    })
 
 });
 
