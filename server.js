@@ -7,6 +7,11 @@ var db = require('./db.js');
 var app = express();
 var PORT = process.env.PORT || 3000;
 
+/* app.use, make whole app use middleware */
+app.use(bodyParser.json());
+/* assign directory as base/root directory for web server*/
+app.use(express.static(__dirname + "/public"));
+
 ////////////////////
 //////  TODO  //////
 ////////////////////
@@ -14,16 +19,6 @@ var PORT = process.env.PORT || 3000;
     1. Remove all traces of todo array
     2. Delete via q like description
 */
-
-// My fantastic todo collection (all of my todos!)
-var todos = [];
-var todoNextId = 1;
-
-/* app.use, make whole app use middleware */
-app.use(bodyParser.json());
-
-/* assign directory as base/root directory for web server*/
-app.use(express.static(__dirname + "/public"));
 
 /* adding middleware to specific route (/about)
 just use a comma (,) and point to the middlware */
@@ -81,7 +76,6 @@ app.post('/todos', function (req, res) {
     }, function (e) {
         res.status(400).json(e);
     });
-
 });
 
 // DELETE /todos/:id
@@ -133,6 +127,17 @@ app.put('/todos/:id', function (req, res) {
         res.status(500).send();
     })
 
+});
+
+// POST /users
+app.post('/users', function (req, res) {
+    var body = _.pick(req.body, 'email', 'password');
+
+    db.user.create(body).then(function (user) {
+        res.json(user.toPublicJSON());
+    }, function (e) {
+        res.status(400).json(e);
+    });
 });
 
 db.sequelize.sync().then(function () {
