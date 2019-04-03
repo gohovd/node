@@ -1,8 +1,11 @@
 var express = require('express');
-var middleware = require('./middleware');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
+
 var db = require('./db.js');
+var middleware = require('./middleware');
+
+var bcrypt= require('bcrypt-nodejs');
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -138,6 +141,18 @@ app.post('/users', function (req, res) {
     }, function (e) {
         res.status(400).json(e);
     });
+});
+
+// POST /users/login
+app.post('/users/login', function (req, res) {
+    var body = _.pick(req.body, 'email', 'password');
+
+    db.user.authenticate(body).then(function() {
+        res.json(user.toPublicJSON());
+    }, function() {
+        res.status(401).send();
+    });
+
 });
 
 db.sequelize.sync().then(function () {

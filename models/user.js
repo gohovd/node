@@ -39,14 +39,38 @@ module.exports = function (sequelize, DataTypes) {
                         user.email = user.email.toLowerCase();
                     }
                 }
+            },
+            classMethods: {
+                authenticate: function (body) {
+                    return new Promise(function (resolve, reject) {
+                        if (typeof body.email !== 'string' || typeof body.password !== 'string') {
+                            return reject();
+                        }
+
+                        db.user.findOne({
+                            where: {
+                                email: body.email
+                            }
+                        }).then(function (user) {
+                            // compare sync to verify password
+                            if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
+                                return reject();
+                            }
+                            // if successful return user json
+                            resolve(user);
+                        }, function (e) {
+                            reject();
+                        });
+                    })
+                }
             }
         });
 
-        //instance methods...
-        user.prototype.toPublicJSON = function () {
-            var json = this.toJSON();
-            return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt');
-        }
+    //instance methods...
+    user.prototype.toPublicJSON = function () {
+        var json = this.toJSON();
+        return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt');
+    }
 
-        return user;
+    return user;
 }
