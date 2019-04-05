@@ -32,31 +32,4 @@ sequelize.sync({
         }
     });
 
-    // Todo.create({
-    //     description: 'Dance the dance'
-    // }).then(function (todo) {
-    //     return Todo.create({
-    //         description: 'Clean office'
-    //     }).then(function () {
-    //         // return Todo.findById(1);
-    //         return Todo.findAll({
-    //             where: {
-    //                 description: {
-    //                     $like: '%Dance%'
-    //                 }
-    //             }
-    //         });
-    //     }).then(function (todos) {
-    //         if (todos) {
-    //             todos.forEach(function (todo) {
-    //                 console.log(todo.toJSON());
-    //             });
-    //         } else {
-    //             console.log('no todo found!');
-    //         }
-    //     });
-    // }).catch(function (e) {
-    //     console.log(e);
-    // });
-
 });
