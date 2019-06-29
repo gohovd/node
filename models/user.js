@@ -61,7 +61,7 @@ module.exports = function (sequelize, DataTypes) {
             var token = jwt.sign({
                 token: encryptedData
             }, 'qwerty098');
-
+            console.log("Token created!!!");
             return token;
 
         } catch (e) {

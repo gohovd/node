@@ -15,7 +15,11 @@ app.get('/', function(req, res) {
 	res.send('Todo API Root');
 });
 
-// GET /todos?completed=false&q=work
+app.get('/me', function (req, res) {
+    
+});
+
+// GET TODO BY QUERY
 app.get('/todos', function(req, res) {
 	var query = req.query;
 	var where = {};
@@ -41,7 +45,7 @@ app.get('/todos', function(req, res) {
 	});
 });
 
-// GET /todos/:id
+// GET TODO BY ID
 app.get('/todos/:id', function(req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
@@ -56,7 +60,7 @@ app.get('/todos/:id', function(req, res) {
 	});
 });
 
-// POST /todos
+// CREATE TODO
 app.post('/todos', function(req, res) {
 	var body = _.pick(req.body, 'description', 'completed');
 
@@ -67,7 +71,7 @@ app.post('/todos', function(req, res) {
 	});
 });
 
-// DELETE /todos/:id
+// DELETE TODO BY ID
 app.delete('/todos/:id', function(req, res) {
 	var todoId = parseInt(req.params.id, 10);
 
@@ -88,7 +92,7 @@ app.delete('/todos/:id', function(req, res) {
 	});
 });
 
-// PUT /todos/:id
+// UPDATE TODO
 app.put('/todos/:id', function(req, res) {
 	var todoId = parseInt(req.params.id, 10);
 	var body = _.pick(req.body, 'description', 'completed');
@@ -117,6 +121,7 @@ app.put('/todos/:id', function(req, res) {
 	});
 });
 
+// CREATE A NEW USER
 app.post('/users', function (req, res) {
 	var body = _.pick(req.body, 'email', 'password');
 
@@ -127,13 +132,15 @@ app.post('/users', function (req, res) {
 	});
 });
 
-// POST /users/login
+// LOGIN
 app.post('/users/login', function (req, res) {
+	console.log("Logging in...");
 	var body = _.pick(req.body, 'email', 'password');
 
 	db.user.authenticate(body).then(function (user) {
-		var token = user.generateToken('authentication');
+		var token = user.generateToken('authentication').json(user.toPublicJSON());
 
+		console.log("Token: "+ token);
 		if (token) {
 			res.header('Auth', token).json(user.toPublicJSON());	
 		} else {
@@ -144,8 +151,8 @@ app.post('/users/login', function (req, res) {
 	});
 });
 
-db.sequelize.sync({force: true}).then(function() {
+db.sequelize.sync({force: false}).then(function() {
 	app.listen(PORT, function() {
 		console.log('Express listening on port ' + PORT + '!');
 	});
-});
+});s
